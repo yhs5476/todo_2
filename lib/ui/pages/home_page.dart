@@ -19,6 +19,10 @@ import '../../services/notification_services.dart';
 import '../size_config.dart';
 import '../theme.dart';
 
+/**
+ * 홈 페이지 클래스
+ * 사용자의 할 일 목록을 표시하고 관리하는 메인 화면
+ */
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -29,6 +33,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late NotifyHelper notifyHelper;
 
+  @override
+  /**
+   * 홈 페이지가 초기화될 때 호출되는 메서드
+   * 알림 설정 초기화 및 사용자 로그인 상태 확인
+   */
   @override
   void initState() {
     super.initState();
@@ -41,6 +50,10 @@ class _HomePageState extends State<HomePage> {
     _checkUserLogin();
   }
   
+  /**
+   * 사용자 로그인 상태를 확인하는 메서드
+   * 로그인되지 않은 경우 로그인 화면으로 이동
+   */
   void _checkUserLogin() {
     if (FirebaseAuth.instance.currentUser == null) {
       Get.offAll(() => const LoginPage());
@@ -50,6 +63,11 @@ class _HomePageState extends State<HomePage> {
   DateTime _selectedDate = DateTime.now();
   final TaskController _taskController = Get.put(TaskController());
 
+  @override
+  /**
+   * 홈 페이지 UI를 구성하는 메서드
+   * 작업 목록, 날짜 선택, 프로필 기능 등을 포함
+   */
   @override
   Widget build(BuildContext context) {
     SizeConfig().init(context);
@@ -79,6 +97,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /**
+   * 커스텀 앱바 생성 메서드
+   * 테마 변경 버튼과 사용자 프로필 섹션을 포함
+   */
   AppBar _customAppBar() {
     return AppBar(
       // ignore: deprecated_member_use
@@ -108,6 +130,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
   
+  /**
+   * 사용자 프로필 섹션을 구현하는 메서드
+   * 사용자 프로필 사진과 로그아웃 메뉴를 포함
+   */
   Widget _buildProfileSection() {
     User? user = FirebaseAuth.instance.currentUser;
     
@@ -148,6 +174,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
   
+  /**
+   * 사용자 로그아웃을 처리하는 메서드
+   * Firebase 인증 서비스를 통해 로그아웃하고 로그인 페이지로 이동
+   */
   void _handleSignOut() async {
     await Get.find<AuthService>().signOut();
     Get.offAll(() => const LoginPage());
@@ -160,7 +190,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  _addTaskBar() {
+  /**
+   * 할 일 추가 바 UI를 생성하는 메서드
+   * 현재 날짜 표시 및 할 일 추가 버튼 포함
+   */
+  Widget _addTaskBar() {
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 10, top: 10),
       child: Row(
@@ -190,7 +224,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  _addDateBar() {
+  /**
+   * 날짜 선택 바 UI를 생성하는 메서드
+   * 사용자가 특정 날짜의 할 일을 선택할 수 있는 달력 표시
+   */
+  Widget _addDateBar() {
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 10, top: 10),
       child: DatePicker(
@@ -227,10 +265,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /**
+   * 화면 새로 고침을 처리하는 메서드
+   * 할 일 목록 데이터를 다시 불러오기
+   */
   Future<void> _onRefresh() async {
     _taskController.getTasks();
   }
 
+  /**
+   * 할 일 목록을 표시하는 메서드
+   * 할 일 목록이 비어 있는 경우 빈 메시지 표시
+   */
   _showTasks() {
     return Expanded(
       child: Obx(() {
@@ -351,6 +397,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /**
+   * 할 일 항목 선택 시 하단에 표시되는 보템시트를 생성하는 메서드
+   * 할 일 완료, 삭제 등의 옵션을 제공
+   */
   _showBottomSheet(BuildContext context, Task task) {
     Get.bottomSheet(SingleChildScrollView(
       child: Container(
