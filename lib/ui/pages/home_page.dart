@@ -1,114 +1,133 @@
-import 'package:date_picker_timeline/date_picker_timeline.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:todo/services/auth_service.dart';
-import 'package:todo/services/theme_services.dart';
-import 'package:todo/ui/pages/login_page.dart';
-import 'package:todo/ui/pages/add_speech_to_text.dart';
-import 'package:todo/ui/pages/add_task_page.dart';
-import 'package:todo/ui/widgets/button.dart';
-import 'package:todo/ui/widgets/task_tile.dart';
-import '../../controllers/task_controller.dart';
-import '../../models/task.dart';
-import '../../services/notification_services.dart';
-import '../size_config.dart';
-import '../theme.dart';
+// 필요한 패키지 및 모듈 가져오기
+import 'package:date_picker_timeline/date_picker_timeline.dart';  // 달력 날짜 선택을 위한 패키지
+import 'package:firebase_auth/firebase_auth.dart';  // Firebase 사용자 인증
+import 'package:flutter/material.dart';  // 기본 Material 디자인
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';  // 애니메이션 효과
+import 'package:flutter_svg/flutter_svg.dart';  // SVG 이미지 표시
+import 'package:get/get.dart';  // GetX 상태 관리 패키지
+import 'package:google_fonts/google_fonts.dart';  // 구글 폰트 적용
+import 'package:intl/intl.dart';  // 날짜 및 시간 포맷팅
+import 'package:todo/services/auth_service.dart';  // 사용자 인증 서비스
+import 'package:todo/services/theme_services.dart';  // 테마 관리 서비스
+import 'package:todo/ui/pages/login_page.dart';  // 로그인 페이지
+import 'package:todo/ui/pages/add_speech_to_text.dart';  // 음성인식으로 할일 추가 페이지
+import 'package:todo/ui/pages/add_task_page.dart';  // 할일 추가 페이지
+import 'package:todo/ui/widgets/button.dart';  // 커스텀 버튼 위젯
+import 'package:todo/ui/widgets/task_tile.dart';  // 할일 목록 아이템 위젯
+import '../../controllers/task_controller.dart';  // 할일 관리 컨트롤러
+import '../../models/task.dart';  // 할일 모델 정의
+import '../../services/notification_services.dart';  // 알림 서비스
+import '../size_config.dart';  // 화면 크기 관리 유틸리티
+import '../theme.dart';  // 앱 테마 설정
 
-/**
- * 홈 페이지 클래스
- * 사용자의 할 일 목록을 표시하고 관리하는 메인 화면
- */
+// 홈 페이지 - 할일 관리의 메인 화면 위젯
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();  // 상태 관리 클래스 생성
 }
 
+// 홈화면의 상태를 관리하는 클래스
 class _HomePageState extends State<HomePage> {
+  // 알림 관리를 위한 헬퍼 객체
   late NotifyHelper notifyHelper;
 
   @override
-  /**
-   * 홈 페이지가 초기화될 때 호출되는 메서드
-   * 알림 설정 초기화 및 사용자 로그인 상태 확인
-   */
-  @override
   void initState() {
     super.initState();
+    // 알림 헬퍼 초기화
     notifyHelper = NotifyHelper();
+    // iOS에서 알림 권한 요청
     notifyHelper.requestIOSPermissions();
+    // 알림 기능 초기화
     notifyHelper.initializeNotification();
+    // 할일 목록 가져오기
     _taskController.getTasks();
     
-    // Check if user is logged in
+    // 사용자 로그인 상태 확인
     _checkUserLogin();
   }
   
-  /**
-   * 사용자 로그인 상태를 확인하는 메서드
-   * 로그인되지 않은 경우 로그인 화면으로 이동
-   */
-  void _checkUserLogin() {
+  // 사용자 로그인 상태 확인 메소드
+  Future<void> _checkUserLogin() async {
+    // Firebase Auth 상태가 정확히 반영될 수 있도록 짧은 딜레이 추가
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // 로그인되지 않았다면 로그인 화면으로 이동
     if (FirebaseAuth.instance.currentUser == null) {
-      Get.offAll(() => const LoginPage());
+      Get.offAll(() => const LoginPage(), transition: Transition.fadeIn);  // 로그인 페이지로 강제 이동 (뒤로가기 기록 삭제)
+    } else {
+      // 로그인되어 있는 경우 사용자 정보 출력 (디버깅 용도)
+      print("사용자 로그인됨: ${FirebaseAuth.instance.currentUser?.displayName}");
     }
   }
 
+  // 현재 선택된 날짜 (기본값은 오늘)
   DateTime _selectedDate = DateTime.now();
+  
+  // 할일 관리를 위한 컨트롤러 초기화 및 의존성 주입
   final TaskController _taskController = Get.put(TaskController());
 
   @override
-  /**
-   * 홈 페이지 UI를 구성하는 메서드
-   * 작업 목록, 날짜 선택, 프로필 기능 등을 포함
-   */
-  @override
   Widget build(BuildContext context) {
+    // 화면 크기 관리 초기화 (반응형 디자인을 위함)
     SizeConfig().init(context);
+    
     return Scaffold(
+      // 배경색 설정 - 현재 테마에 따라 다른 배경색 적용
       // ignore: deprecated_member_use
       backgroundColor: context.theme.scaffoldBackgroundColor,
+      
+      // 상단 앱바 생성
       appBar: _customAppBar(),
+      
+      // 본문 내용 구성
       body: Column(
         children: [
-          _addTaskBar(),
-          _addDateBar(),
+          _addTaskBar(),   // 할일 추가 버튼과 날짜 표시 부분
+          _addDateBar(),   // 달력 날짜 선택기 부분
           const SizedBox(
             height: 6,
           ),
-          _showTasks(),
+          _showTasks(),    // 할일 목록 표시 부분
         ],
       ),
+      
+      // 음성 인식으로 할일 추가하는 버튼
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          // 음성인식 페이지로 이동
           await Get.to(() => const AddSpeechToTextPage());
+          // 새로운 할일 목록 가져오기
           _taskController.getTasks();
         },
         backgroundColor: primaryClr,
-        child: const Icon(Icons.mic),
+        child: const Icon(Icons.mic),  // 마이크 아이콘
       ),
+      
+      // 플로팅 버튼 위치 (왼쪽 아래쪽 설정)
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 
-  /**
-   * 커스텀 앱바 생성 메서드
-   * 테마 변경 버튼과 사용자 프로필 섹션을 포함
-   */
+  // 커스텀 앱바 구성 메소드
   AppBar _customAppBar() {
     return AppBar(
+      // 배경색 설정 - 현재 테마에 따라 표시
       // ignore: deprecated_member_use
       backgroundColor: context.theme.scaffoldBackgroundColor,
+      
+      // 그림자 제거 (평면 앱바)
       elevation: 0,
+      
+      // 좌측 버튼 - 테마 변경 버튼 구현
       leading: GestureDetector(
         onTap: () {
+          // 테마 변경 (라이트/다크 모드 전환)
           ThemeServices().switchTheme();
+          
+          // 테마 변경 시 알림 표시
           notifyHelper.displayNotification(
               title: "Theme Changed",
               body: Get.isDarkMode
@@ -116,50 +135,62 @@ class _HomePageState extends State<HomePage> {
                   : "Activated Dark Theme");
           //notifyHelper.scheduledNotification();
         },
+        // 현재 테마에 따라 다른 아이콘 표시
         child: Icon(
+          // 다크 모드일 때 해 아이콘, 라이트 모드일 때 달 아이콘
           Get.isDarkMode ? Icons.wb_sunny_outlined : Icons.nightlight_round,
           size: 20,
+          // 테마에 따라 아이콘 색상 변경
           color: Get.isDarkMode ? Colors.white : Colors.black,
         ),
       ),
+      
+      // 우측 기능 버튼들
       actions: [
-        // User profile section
+        // 사용자 프로필 섹션 (로그아웃 메뉴 포함)
         _buildProfileSection(),
         const SizedBox(width: 20),
       ],
     );
   }
   
-  /**
-   * 사용자 프로필 섹션을 구현하는 메서드
-   * 사용자 프로필 사진과 로그아웃 메뉴를 포함
-   */
+  // 사용자 프로필 및 계정 관리 섹션 구성 메소드
   Widget _buildProfileSection() {
+    // 현재 Firebase에 로그인된 사용자 정보 가져오기
     User? user = FirebaseAuth.instance.currentUser;
     
+    // 팝업 메뉴 버튼 구성
     return PopupMenuButton<String>(
+      // 사용자 프로필 이미지 표시
       icon: CircleAvatar(
+        // 구글 프로필 이미지가 있으면 해당 이미지를 사용, 없으면 기본 이미지 사용
         backgroundImage: user?.photoURL != null 
           ? NetworkImage(user!.photoURL!) 
           : const AssetImage("images/person.jpeg") as ImageProvider,
         radius: 18,
       ),
+      // 메뉴 아이템 선택 시 작업 처리
       onSelected: (value) {
         if (value == 'logout') {
+          // 로그아웃 기능 실행
           _handleSignOut();
         }
       },
+      // 팝업 메뉴 아이템 구성
       itemBuilder: (BuildContext context) => [
+        // 프로필 표시 메뉴
         PopupMenuItem<String>(
           value: 'profile',
           child: Row(
             children: [
               const Icon(Icons.person, color: primaryClr),
               const SizedBox(width: 10),
+              // 사용자 이름 표시 (없을 경우 기본값 설정)
               Text(user?.displayName ?? '사용자'),
             ],
           ),
         ),
+        // 로그아웃 메뉴
         const PopupMenuItem<String>(
           value: 'logout',
           child: Row(
@@ -174,27 +205,25 @@ class _HomePageState extends State<HomePage> {
     );
   }
   
-  /**
-   * 사용자 로그아웃을 처리하는 메서드
-   * Firebase 인증 서비스를 통해 로그아웃하고 로그인 페이지로 이동
-   */
+  // 로그아웃 처리 메소드
   void _handleSignOut() async {
+    // AuthService를 통한 로그아웃 처리
     await Get.find<AuthService>().signOut();
+    
+    // 로그인 화면으로 강제 이동 (뒤로가기 기록 삭제)
     Get.offAll(() => const LoginPage());
+    
+    // 로그아웃 성공 메시지 표시
     Get.snackbar(
       "로그아웃 성공", 
       "로그아웃되었습니다.",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,  // 하단에 표시
+      backgroundColor: Colors.green,  // 배경색은 초록색
+      colorText: Colors.white,  // 텍스트 색상은 흰색
     );
   }
 
-  /**
-   * 할 일 추가 바 UI를 생성하는 메서드
-   * 현재 날짜 표시 및 할 일 추가 버튼 포함
-   */
-  Widget _addTaskBar() {
+  _addTaskBar() {
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 10, top: 10),
       child: Row(
@@ -224,11 +253,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /**
-   * 날짜 선택 바 UI를 생성하는 메서드
-   * 사용자가 특정 날짜의 할 일을 선택할 수 있는 달력 표시
-   */
-  Widget _addDateBar() {
+  _addDateBar() {
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 10, top: 10),
       child: DatePicker(
@@ -265,18 +290,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /**
-   * 화면 새로 고침을 처리하는 메서드
-   * 할 일 목록 데이터를 다시 불러오기
-   */
   Future<void> _onRefresh() async {
     _taskController.getTasks();
   }
 
-  /**
-   * 할 일 목록을 표시하는 메서드
-   * 할 일 목록이 비어 있는 경우 빈 메시지 표시
-   */
   _showTasks() {
     return Expanded(
       child: Obx(() {
@@ -397,10 +414,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /**
-   * 할 일 항목 선택 시 하단에 표시되는 보템시트를 생성하는 메서드
-   * 할 일 완료, 삭제 등의 옵션을 제공
-   */
   _showBottomSheet(BuildContext context, Task task) {
     Get.bottomSheet(SingleChildScrollView(
       child: Container(

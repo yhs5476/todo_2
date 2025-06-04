@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:todo/services/auth_service.dart'; // AuthService 추가
 import 'package:todo/ui/pages/home_page.dart';
 import 'package:todo/ui/theme.dart';
 
@@ -14,8 +14,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  // AuthService 사용
+  final AuthService _authService = Get.find<AuthService>();
   bool _isLoading = false;
 
   @override
@@ -26,10 +26,12 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _checkCurrentUser() async {
-    User? user = _auth.currentUser;
+    // 로그인 상태 확인 시 짧은 지연 추가 (Firebase Auth 상태 정확히 확인하기 위함)
+    await Future.delayed(const Duration(milliseconds: 500));
+    User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       // User is already signed in, navigate to HomePage
-      Get.off(() => const HomePage());
+      Get.off(() => const HomePage(), transition: Transition.fadeIn);
     }
   }
 
@@ -39,34 +41,11 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true;
       });
 
-      // Trigger the Google Sign In process
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
-      if (googleUser == null) {
-        // User canceled the sign-in process
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // Obtain auth details from Google Sign In
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create a new credential for Firebase
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
-      
-      // Get the user from the UserCredential
-      final User? user = userCredential.user;
+      // AuthService를 통한 구글 로그인 처리
+      final User? user = await _authService.signInWithGoogle();
 
       if (user != null) {
-        // User successfully signed in
+        // 사용자 로그인 성공
         Get.snackbar(
           "로그인 성공",
           "${user.displayName}님 환영합니다",
@@ -76,8 +55,10 @@ class _LoginPageState extends State<LoginPage> {
           icon: const Icon(Icons.check_circle, color: Colors.white),
         );
         
-        // Navigate to HomePage
-        Get.off(() => const HomePage());
+        // 홈페이지로 이동 (페이드 인 효과 추가)
+        // 짧은 지연 추가로 Firebase Auth 상태 업데이트 보장
+        await Future.delayed(const Duration(milliseconds: 500));
+        Get.off(() => const HomePage(), transition: Transition.fadeIn);
       }
     } catch (e) {
       Get.snackbar(
